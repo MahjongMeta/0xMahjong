@@ -222,48 +222,51 @@ library MerkleProof {
     }
 }
 
-pragma solidity >=0.8.9 <0.9.0;
+// pragma solidity >=0.8.9 <0.9.0;
 
 import './ERC721A.sol';
 import './Ownable.sol';
 import './ReentrancyGuard.sol';
 
-contract Mahjong is ERC721A, Ownable, ReentrancyGuard {
+import {ERC2981} from "./ERC2981.sol";
+import {DefaultOperatorFilterer} from "./DefaultOperatorFilterer.sol";
 
-  using Strings for uint256;
+contract Mahjong is ERC721A, Ownable, ReentrancyGuard, ERC2981, DefaultOperatorFilterer {
 
-  /** 
-  * @dev Set max amount of NFTs per address
+    using Strings for uint256;
+
+    /**
+    * @dev Set max amount of NFTs per address
   */
-  uint256 public constant maxMintPerWallet = 1;
+    uint256 public constant maxMintPerWallet = 1;
 
-  /** 
-  * @dev Set max supply for the DeviantsSilverPass collection
+    /**
+    * @dev Set max supply for the DeviantsSilverPass collection
   */
-  uint256 public constant maxSupply = 1500;
+    uint256 public constant maxSupply = 1500;
 
-  /** 
-  * @dev A boolean that indicates whether the mintWhitelistSale function is paused or not.
+    /**
+    * @dev A boolean that indicates whether the mintWhitelistSale function is paused or not.
   */
-  bool public pauseWLSale = true;
+    bool public pauseWLSale = false;
 
-  /** 
-  * @dev A boolean that indicates whether the contract isindicates is paused or not.
+    /**
+    * @dev A boolean that indicates whether the contract isindicates is paused or not.
   */
-  bool public globalPause = false;
+    bool public globalPause = false;
 
-  /**
-  * @dev The root of the Merkle tree that is used for whitelist check.
+    /**
+    * @dev The root of the Merkle tree that is used for whitelist check.
   */
-  bytes32 public merkleRoot;
+    bytes32 public merkleRoot;
 
-  /**
-  * @dev A mapping that stores the amount of NFTs minted for each address.
+    /**
+    * @dev A mapping that stores the amount of NFTs minted for each address.
   */
-  mapping(address => uint256) public addressMintedAmount;
+    mapping(address => uint256) public addressMintedAmount;
 
-  string public uriPrefix;
-  string public uriSuffix;
+    string public uriPrefix;
+    string public uriSuffix;
 
     /**
      * @dev Emits an event when an NFT is minted in whitelist sale period.
@@ -300,8 +303,8 @@ contract Mahjong is ERC721A, Ownable, ReentrancyGuard {
 
         addressMintedAmount[msg.sender] += 1;
         _safeMint(msg.sender,1);
- 
-        emit MintWhitelistSale(msg.sender, 1);  
+
+        emit MintWhitelistSale(msg.sender, 1);
     }
 
     function _startTokenId() internal view virtual override returns (uint256) {
@@ -351,6 +354,57 @@ contract Mahjong is ERC721A, Ownable, ReentrancyGuard {
     function _baseURI() internal view virtual override returns (string memory) {
         return uriPrefix;
     }
-}
 
+    // --------------------------------------------------------------
+    /**
+     * @dev See {IERC721-setApprovalForAll}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function setApprovalForAll(address operator, bool approved) public override onlyAllowedOperatorApproval(operator) {
+        super.setApprovalForAll(operator, approved);
+    }
+
+    /**
+     * @dev See {IERC721-approve}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function approve(address operator, uint256 tokenId) public override onlyAllowedOperatorApproval(operator) {
+        super.approve(operator, tokenId);
+    }
+
+    /**
+     * @dev See {IERC721-transferFrom}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function transferFrom(address from, address to, uint256 tokenId) public override onlyAllowedOperator(from) {
+        super.transferFrom(from, to, tokenId);
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId) public override onlyAllowedOperator(from) {
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data)
+    public
+    override
+    onlyAllowedOperator(from)
+    {
+        super.safeTransferFrom(from, to, tokenId, data);
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721A, ERC2981) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+}
 
